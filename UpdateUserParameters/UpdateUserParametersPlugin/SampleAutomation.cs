@@ -25,6 +25,7 @@ using Inventor;
 using Autodesk.Forge.DesignAutomation.Inventor.Utils;
 
 using System.IO.Compression;
+
 using File = System.IO.File;
 using Path = System.IO.Path;
 using Directory = System.IO.Directory;
@@ -54,7 +55,7 @@ namespace UpdateUserParametersPlugin
                 {
                     string currDir = Directory.GetCurrentDirectory();
 
-                    // Comment out for local debug
+                    // Uncomment out for local debug
                     //string inputPath = System.IO.Path.Combine(currDir, @"../../inputFiles", "params.json");
                     //Dictionary<string, string> options = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(inputPath));
 
@@ -76,7 +77,7 @@ namespace UpdateUserParametersPlugin
                     Console.WriteLine("assemblyPath = " + assemblyPath);
                     Document doc = inventorApplication.Documents.Open(assemblyPath);
 
-                    // Comment out for local debug
+                    // Uncomment out for local debug
                     //string paramInputPath = System.IO.Path.Combine(currDir, @"../../inputFiles", "parameters.json");
                     //Dictionary<string, string> parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(paramInputPath));
 
@@ -106,9 +107,12 @@ namespace UpdateUserParametersPlugin
 
                     // Zip up the output assembly
                     //
-                    // assembly lives in own folder under WorkingDir. Get the WorkingDir
+                    // assembly lives in own folder under WorkingDir. Get the WorkingDir. We want to zip up the original zip to include things like project 
+                    // files and libraries
+                    var zipInputDir = Path.GetDirectoryName(Path.GetDirectoryName(pathName) + "/../");
                     var fileName = Path.Combine(Directory.GetCurrentDirectory(), "result.zip"); // the name must be in sync with OutputIam localName in Activity
-                    ZipOutput(Path.GetDirectoryName(pathName), fileName);
+                    ZipOutput(zipInputDir, fileName);
+
                 }
             }
             catch (Exception e)
@@ -153,14 +157,14 @@ namespace UpdateUserParametersPlugin
                 // start HeartBeat around ZipFile, it could be a long operation
                 using (new HeartBeat())
                 {
-                    ZipFile.CreateFromDirectory(pathName, fileName, CompressionLevel.Fastest, false);
+                     ZipFile.CreateFromDirectory(pathName, fileName, CompressionLevel.Fastest, false);
                 }
 
                 LogTrace($"Saved as {fileName}");
             }
             catch (Exception e)
             {
-                LogError($"********Export to format SVF failed: {e.Message}");
+                LogError($"********Zip Failed: {e.Message}");
             }
         }
 
