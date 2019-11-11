@@ -67,18 +67,21 @@ namespace UpdateUserParametersPlugin
                     string assemblyPath = Path.GetFullPath(Path.Combine(currDir, inputFile));
                     string fullProjectPath = Path.GetFullPath(Path.Combine(currDir, projectFile));
 
-                    // For debug of input data set
-                    //DirPrint(currDir);
-                    Console.WriteLine("fullProjectPath = " + fullProjectPath);
+                    if (options.ContainsKey("projectPath"))
+                    {
+                        // For debug of input data set
+                        //DirPrint(currDir);
+                        Console.WriteLine("fullProjectPath = " + fullProjectPath);
 
-                    DesignProject dp = inventorApplication.DesignProjectManager.DesignProjects.AddExisting(fullProjectPath);
-                    dp.Activate();
+                        DesignProject dp = inventorApplication.DesignProjectManager.DesignProjects.AddExisting(fullProjectPath);
+                        dp.Activate();
+                    }
 
                     Console.WriteLine("assemblyPath = " + assemblyPath);
                     Document doc = inventorApplication.Documents.Open(assemblyPath);
 
                     // Uncomment out for local debug
-                    //string paramInputPath = System.IO.Path.Combine(currDir, @"../../inputFiles", "parameters.json");
+                    //string paramInputPath = System.IO.Path.Combine(currDir, @"../../inputFiles", "documentParams.json");
                     //Dictionary<string, string> parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(paramInputPath));
 
                     Dictionary<string, string> parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText("documentParams.json"));
