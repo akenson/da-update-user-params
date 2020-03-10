@@ -77,7 +77,7 @@ namespace UpdateUserParametersPlugin
                         dp.Activate();
                     }
 
-                    Console.WriteLine("assemblyPath = " + assemblyPath);
+                    Console.WriteLine("documentPath = " + assemblyPath);
                     Document doc = inventorApplication.Documents.Open(assemblyPath);
 
                     // Uncomment out for local debug
@@ -90,20 +90,21 @@ namespace UpdateUserParametersPlugin
                         var paramName = entry.Key;
                         var paramValue = entry.Value;
                         LogTrace($" params: {paramName}, {paramValue}");
-                        ChangeParam((AssemblyDocument)doc, paramName, paramValue);
+                        ChangeParam(doc, paramName, paramValue);
                     }
+
 
                     LogTrace($"Getting full file name of assembly");
                     var docDir = Path.GetDirectoryName(doc.FullFileName);
                     var pathName = doc.FullFileName;
                     doc.Update2(true);
 
-                    // Save both svf and iam for now. To optimize check output type to only save one or the other
-
                     // Save Forge Viewer format (SVF)
                     string viewableDir = SaveForgeViewable(doc);
                     string viewableZip = Path.Combine(Directory.GetCurrentDirectory(), "viewable.zip");
                     ZipOutput(viewableDir, viewableZip);
+
+                    // Save both svf and iam for now. To optimize check output type to only save one or the other
                     LogTrace($"Saving updated assembly");
                     doc.Save2(true);
                     doc.Close(true);
@@ -111,7 +112,8 @@ namespace UpdateUserParametersPlugin
                     // Zip up the output assembly
                     //
                     // assembly lives in own folder under WorkingDir. Get the WorkingDir. We want to zip up the original zip to include things like project 
-                    // files and libraries
+                    // files and libraries. For parts make sure they are also in a subdirectory
+                    LogTrace("Zipping up path: " + Path.GetDirectoryName(pathName));
                     var zipInputDir = Path.GetDirectoryName(Path.GetDirectoryName(pathName) + "/../");
                     var fileName = Path.Combine(Directory.GetCurrentDirectory(), "result.zip"); // the name must be in sync with OutputIam localName in Activity
                     ZipOutput(zipInputDir, fileName);
@@ -129,13 +131,33 @@ namespace UpdateUserParametersPlugin
             LogTrace("RunWithArguments not implemented");
         }
 
-        public void ChangeParam(AssemblyDocument doc, string paramName, string paramValue)
+        public void ChangeParam(Document doc, string paramName, string paramValue)
         {
+            UserParameters userParams;
+
+            if(doc.DocumentType == DocumentTypeEnum.kPartDocumentObject)
+            {
+                LogTrace("Part Document");
+                PartComponentDefinition partComponentDef = ((PartDocument)doc).ComponentDefinition;
+                Parameters docParams = partComponentDef.Parameters;
+                userParams = docParams.UserParameters;
+            }
+            else if (doc.DocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
+            {
+                LogTrace("Assembly Document");
+                AssemblyComponentDefinition assemblyComponentDef = ((AssemblyDocument)doc).ComponentDefinition;
+                Parameters docParams = assemblyComponentDef.Parameters;
+                userParams = docParams.UserParameters;
+            }
+            else
+            {
+                LogTrace("Unknown Document");
+                // unsupported doc type, throw exception
+                throw new Exception("Unsupported document type: " + doc.DocumentType.ToString());
+            }
+
             using (new HeartBeat())
             {
-                AssemblyComponentDefinition assemblyComponentDef = doc.ComponentDefinition;
-                Parameters docParams = assemblyComponentDef.Parameters;
-                UserParameters userParams = docParams.UserParameters;
                 try
                 {
                     LogTrace($"Setting {paramName} to {paramValue}");
@@ -209,12 +231,15 @@ namespace UpdateUserParametersPlugin
                         var workingDir = Path.GetDirectoryName(doc.FullFileName);
                         var sessionDir = Path.Combine(workingDir, "SvfOutput");
 
+                        LogTrace("*** SessionDir: " + sessionDir + ", workingDir: " + workingDir);
+
                         // Make sure we delete any old contents that may be in the output directory first,
                         // this is for local debugging. In DA4I the working directory is always clean
                         if (Directory.Exists(sessionDir))
                         {
                             Directory.Delete(sessionDir, true);
                         }
+
 
                         oData.FileName = Path.Combine(sessionDir, "result.collaboration");
                         var outputDir = Path.Combine(sessionDir, "output");
